@@ -5,7 +5,7 @@ import hashlib
 from countryLoader import CountryLoader
 
 
-class dataGenerator():
+class DataGenerator():
 
     def __init__(self) -> None:
         self.data = pd.DataFrame(columns=["Region", "Country Name", "Language", "Time"])
@@ -19,6 +19,7 @@ class dataGenerator():
     
     def createData(self):
 
+        #carga los paises desde el api
         countrys = self.contryLoader.get_countrys()
 
         for country in countrys:
@@ -28,12 +29,14 @@ class dataGenerator():
             name = country["name"]["common"]
             region = country["region"]
 
-
+            #Revida cada uno de los lenguajes que se hablan en el pais
             for language in country.get("languages",{}).keys():
-                
+                #encripta el lenguaje
                 language = self.encryptLanguaje(language)
+                #calcula el tiempo que se demoro en obtener los datos de la fila en (ms)
                 time = (datetime.now() -start_time).total_seconds() * 1000
 
+                #Inserta la dila en el dataframe
                 self.data = self.data.append(
                     {
                         "Region" :region,
@@ -45,17 +48,28 @@ class dataGenerator():
 
                     ignore_index=True)
 
-    def save_to_sqlite(self):
-        conn = sqlite3.connect('example.db')
-        self.data.to_sql('data', conn)
+
+        #calculando los datos estadisticos total de duración, maximo,minimo,promedio
+        _total = self.data["Time"].sum()
+        _max = self.data["Time"].max()
+        _min = self.data["Time"].min()
+        _mean = self.data["Time"].mean()
+
+        self.metrics = pd.DataFrame(
+            [{"Total de tiempo (ms)":_total,"Maximo (ms)":_max,"Minimo (ms)":_min,"Promedio (ms)":_mean}],  
+            )
+
+    
+
+class FileManager():
+
+    #Guarda un dataframe en un archivo sqlite
+    def save_to_sqlite(self,dataframe,name="data"):
+        conn = sqlite3.connect('database.db')
+        dataframe.to_sql(name, conn)
+
+    #Guarda un dataframe en un archivo sqlite
+    def save_to_json(self, dataframe, name = "data"):
+        dataframe.to_json(r"{}.json".format(name))
 
 
-    def save_to_json(self):
-        pass
-
-
-
-
-dg = dataGenerator()
-dg.createData()
-dg.save_to_sqlite()
